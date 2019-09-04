@@ -1,5 +1,7 @@
 # DWM Statusbar
 
+<img src="https://github.com/Andilutten/dwmstatus/blob/master/screenshot.png"/>
+
 Dynamic and configurable statusbar for dwm written in Go.
 It uses rpc to setup a server that updates the root window name.
 See [Remotely using it](#remotely-using-it) how to use rpc to 
