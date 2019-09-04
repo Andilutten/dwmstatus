@@ -1,0 +1,13 @@
+items:
+  - command: iwgetid --raw
+    interval: 60
+    name: Wifi
+  - command: date
+    interval: 1
+    name: Date
+  - command: acpi | awk '{print " " $4}' | tr '\n' ' '
+    interval: 60
+    name: Battery
+  - command: awk -F"[][]" '/dB/ { print "墳 " $2 }' <(amixer sget Master)
+    interval: 60
+    name: Volume
