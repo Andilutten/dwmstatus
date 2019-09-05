@@ -31,7 +31,6 @@ func (e Events) Swap(i, j int) {
 }
 
 func SendUpdate(target string) {
-	fmt.Printf("Trying to update %s\n", target)
 	client, err := rpc.DialHTTP("tcp", "localhost:8910")
 	if err != nil {
 		panic(err)
