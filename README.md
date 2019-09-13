@@ -40,3 +40,4 @@ dwmstatus -update [NAME]
 NAME should be any of the names mapped in config.yaml.
 This command triggers the given statusbar item to force reload.
 
+Have fun!
