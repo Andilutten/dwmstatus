@@ -132,7 +132,7 @@ func UpdateRootWindow(name string) {
 	}
 }
 
-// DisplayNotification as a ???
+// DisplayNotification as a jumbotron
 func DisplayNotification(m MonitorMessage, length int) {
 	t := time.NewTicker(time.Millisecond * 200)
 	msg := strings.Repeat(" ", length) + m.String()
