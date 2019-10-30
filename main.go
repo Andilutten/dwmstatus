@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"flag"
 	"fmt"
 	"net"
@@ -30,12 +31,14 @@ func (e Events) Swap(i, j int) {
 	e[i], e[j] = e[j], e[i]
 }
 
+// SendUpdate sends an update signal to
+// the rpc server.
 func SendUpdate(target string) {
 	client, err := rpc.DialHTTP("tcp", "localhost:8910")
 	if err != nil {
 		panic(err)
 	}
-	status := new(bool) 
+	status := new(bool)
 	err = client.Call("Server.Call", Args{Target: target}, status)
 	if err != nil {
 		panic(err)
@@ -70,6 +73,13 @@ func main() {
 		remotes[item.Name] = remote
 		go Worker(item, c, order, remote)
 	}
+
+	// Setup dbus notification monitor
+	ctx, cancel := context.WithCancel(context.Background())
+	mc := make(chan MonitorMessage)
+	go NotifyMonitor(ctx, mc)
+	defer cancel()
+
 	// Setup rpc server
 	server := NewServer(remotes)
 	rpc.Register(server)
@@ -84,33 +94,72 @@ func main() {
 	for {
 		// Create event slice to for sorting
 		events := make(Events, 0)
-		// Get next event
-		e := <-c
-		events = append(events, e)
-		// Add event to cache
-		cache[e.Name] = e
-		// Gather rest from cache
-		for _, ee := range cache {
-			if ee.Name != e.Name {
-				events = append(events, ee)
+		select {
+		case e := <-c:
+			// Update bar
+			events = append(events, e)
+			// Add event to cache
+			cache[e.Name] = e
+			// Gather rest from cache
+			for _, ee := range cache {
+				if ee.Name != e.Name {
+					events = append(events, ee)
+				}
 			}
-		}
-		// Sort list of events
-		sort.Sort(events)
-		// Store values in buffer
-		buf := new(bytes.Buffer)
-		for _, ee := range events {
-			fmt.Fprintf(buf, "%s ", strings.TrimSpace(ee.Value))
-		}
-		// Update root window
-		cmd := exec.Command("xsetroot", "-name", buf.String())
-		err := cmd.Run()
-		if err != nil {
-			panic(err)
+			// Sort list of events
+			sort.Sort(events)
+			// Store values in buffer
+			buf := new(bytes.Buffer)
+			for _, ee := range events {
+				fmt.Fprintf(buf, "%s ", strings.TrimSpace(ee.Value))
+			}
+			// Update root window
+			UpdateRootWindow(buf.String())
+		case m := <-mc:
+			// Show notification
+			l := StatusLength(cache)
+			DisplayNotification(m, l)
 		}
 	}
 }
 
+// UpdateRootWindow name
+func UpdateRootWindow(name string) {
+	cmd := exec.Command("xsetroot", "-name", name)
+	err := cmd.Run()
+	if err != nil {
+		panic(err)
+	}
+}
+
+// DisplayNotification as a ???
+func DisplayNotification(m MonitorMessage, length int) {
+	t := time.NewTicker(time.Millisecond * 200)
+	msg := strings.Repeat(" ", length) + m.String()
+	for {
+		if len(msg) == 0 {
+			break
+		}
+		if length - len(msg) > 0 {
+			p := strings.Repeat(" ", length-len(msg))
+			UpdateRootWindow(msg + p)
+		} else {
+			UpdateRootWindow(msg[:length])
+		}
+		<-t.C
+		msg = msg[1:]
+	}
+}
+
+// StatusLength returns the length of the latest status
+func StatusLength(cache map[string]Event) (sum int) {
+	for _, ee := range cache {
+		sum += len(ee.Value)
+	}
+	return
+}
+
+// Worker function
 func Worker(item Item, c chan<- Event, order int, remote <-chan bool) {
 	ticker := time.NewTicker(time.Second * item.Interval)
 	for {
