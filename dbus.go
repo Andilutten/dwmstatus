@@ -110,14 +110,6 @@ func (dh *DBusHandler) GetServerInformation() (string, string, string, string, *
 	return name, vendor, version, spec_version, nil
 }
 
-// func (dh *DBusHandler) GetServerInformation(name *string, vendor *string, version *string, spec_version *string) *dbus.Error {
-// 	*name = "dwmstatus"
-// 	*vendor = "Andreas Malmqvist"
-// 	*version = "v1.1"
-// 	*spec_version = "1.2"
-// 	return nil
-// }
-
 func (dh *DBusHandler) Handle(ctx context.Context, mc chan<- MonitorMessage) {
 	// Connect to dbus
 	conn, err := dbus.SessionBus()
