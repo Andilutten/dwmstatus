@@ -77,7 +77,8 @@ func main() {
 	// Setup dbus notification monitor
 	ctx, cancel := context.WithCancel(context.Background())
 	mc := make(chan MonitorMessage)
-	go NotifyMonitor(ctx, mc)
+	dh := new(DBusHandler)
+	go dh.Handle(ctx, mc)
 	defer cancel()
 
 	// Setup rpc server
