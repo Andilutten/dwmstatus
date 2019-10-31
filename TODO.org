@@ -1,0 +1,2 @@
+* Todo
+** [] I want to be able to cancel the notification jumbotron (-skip-notification ??)

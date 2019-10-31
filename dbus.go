@@ -1,6 +1,7 @@
 package main
 
 import (
+	"time"
 	"context"
 	"fmt"
 	"os"
@@ -62,6 +63,7 @@ type (
 		Summary string
 		Body    string
 		Urgency Urgency
+		ID uint
 	}
 	Urgency     uint8
 	DBusHandler struct {
@@ -79,14 +81,15 @@ func (dh *DBusHandler) Notify(
 	hints map[string]interface{},
 	expire_timeout int32,
 ) (uint, *dbus.Error) {
-
+	id := time.Now().Unix()
 	m := MonitorMessage{
 		Summary: summary,
 		Body: body,
 		Urgency: Urgency(hints["urgency"].(uint8)),
+		ID: uint(id),
 	}
 	dh.queue <- m
-	return 1, nil
+	return uint(id), nil
 }
 
 func (dh *DBusHandler) GetCapabilities() ([]string, *dbus.Error) {
