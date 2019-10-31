@@ -48,12 +48,33 @@ func SendUpdate(target string) {
 	}
 }
 
+func SendCancel() {
+	client, err := rpc.DialHTTP("tcp", "localhost:8910")
+	if err != nil {
+		panic(err)
+	}
+	status := new(bool)
+	err = client.Call("Server.CancelNotification", CancelArgs{}, status)
+	if err != nil {
+		panic(err)
+	}
+	if !*status {
+		fmt.Printf("Request failed ...\n")
+	}
+}
+
 func main() {
-	// Check if user wants to update daemon
 	updateFlag := flag.String("update", "", "update item with name [NAME]")
+	cancelFlag := flag.Bool("cancel", false, "cancel notification")
+	// Check if user wants to update daemon
 	flag.Parse()
 	if len(*updateFlag) != 0 {
 		SendUpdate(*updateFlag)
+		return
+	}
+	// Check if user wants to cancel notification
+	if *cancelFlag {
+		SendCancel()
 		return
 	}
 	// Load config
@@ -76,13 +97,14 @@ func main() {
 
 	// Setup dbus notification monitor
 	ctx, cancel := context.WithCancel(context.Background())
+	nc := make(chan bool)
 	mc := make(chan MonitorMessage)
 	dh := new(DBusHandler)
 	go dh.Handle(ctx, mc)
 	defer cancel()
 
 	// Setup rpc server
-	server := NewServer(remotes)
+	server := NewServer(remotes, nc)
 	rpc.Register(server)
 	rpc.HandleHTTP()
 	l, err := net.Listen("tcp", ":8910")
@@ -119,7 +141,7 @@ func main() {
 		case m := <-mc:
 			// Show notification
 			l := StatusLength(cache)
-			DisplayNotification(m, l)
+			DisplayNotification(m, l, nc)
 		}
 	}
 }
@@ -134,7 +156,7 @@ func UpdateRootWindow(name string) {
 }
 
 // DisplayNotification as a jumbotron
-func DisplayNotification(m MonitorMessage, length int) {
+func DisplayNotification(m MonitorMessage, length int, cancel <-chan bool) {
 	t := time.NewTicker(time.Millisecond * 200)
 	msg := strings.Repeat(" ", length) + m.String()
 	for {
@@ -147,7 +169,11 @@ func DisplayNotification(m MonitorMessage, length int) {
 		} else {
 			UpdateRootWindow(msg[:length])
 		}
-		<-t.C
+		select {
+		case <-t.C:
+		case <-cancel:
+			return
+		}
 		msg = msg[1:]
 	}
 }
