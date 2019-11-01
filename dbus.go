@@ -81,11 +81,15 @@ func (dh *DBusHandler) Notify(
 	hints map[string]interface{},
 	expire_timeout int32,
 ) (uint, *dbus.Error) {
+	u := UrgencyNormal
+	if uu, ok := hints["urgency"]; ok {
+		u = Urgency(uu.(uint8))
+	}
 	id := time.Now().Unix()
 	m := MonitorMessage{
 		Summary: summary,
 		Body: body,
-		Urgency: Urgency(hints["urgency"].(uint8)),
+		Urgency: u,
 		ID: uint(id),
 	}
 	dh.queue <- m
